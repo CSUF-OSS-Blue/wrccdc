@@ -1,0 +1,3 @@
+[linux_servers]
+   name ansible_host=192.168.1.55 ansible_user=root ansible_password= ansible_become_password=
+  
