@@ -1,0 +1,52 @@
+# to run use sudo ansible-playbook -i inventory change.yml
+# add vm name, ip, and root pass (for both password fields) in inventory file
+# add path to save file to in the last task
+- name: Change all passwords on Linux servers
+  hosts: linux_servers
+  become: yes
+  tasks:
+
+    - name: Define password file name
+      set_fact:
+        password_file: "new_passwords.txt"
+
+    - name: Get list of users with UID > 1000
+      # field separator set to colon bc structure of /etc/passwd
+      # $3 for uid, condition checks for users 1000-6000 and prints the user to console if match
+      command: "awk -F: '$3 >= 1000 && $3 < 6000 {print $1}' /etc/passwd"
+      register: users
+
+    - name: Generate a new password for each user
+      # sets variable dynmically duirng playbook execution
+      set_fact:
+        # initialize user_passwords as empty dictionary if not defined
+        # lookup() generates random pass w/length 16 using ascii letters, digs, + punct
+        # combine() combines current dict w/ new pairs (key/value)
+        user_passwords: "{{ user_passwords | default({}) | combine({item: lookup('password', '/dev/null', length=16, chars='ascii_letters,digits,punctuation')}) }}"
+      # loops through users in users.stdout_lines    
+      loop: "{{ users.stdout_lines }}"
+
+    - name: Change password for each user
+      # user is ansible module to manage user accounts
+      user:
+        # sets user
+        name: "{{ item }}"
+        # retrieves user password + hashes w/ sha512 and loops
+        password: "{{ user_passwords[item] | password_hash('sha512') }}"
+      loop: "{{ users.stdout_lines }}"
+       
+      # prepares info for password file
+    - name: Prepare content for password file
+      set_fact:
+        password_file_content: |
+          {% for user in users.stdout_lines %}
+          User: {{ user }}, Password: {{ user_passwords[user] }}
+          {% endfor %}
+    
+    # writes passwords to file on local machine
+    - name: Write passwords to file
+      copy:
+        content: "{{ password_file_content }}"
+        dest: "/wrccdc/user_passwords/{{ inventory_hostname }}-{{ password_file }}" #change to where you want to save file
+        mode: '0777'  
+      delegate_to: localhost  
