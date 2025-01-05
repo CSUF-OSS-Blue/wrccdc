@@ -1,0 +1,373 @@
+# to run use sudo ansible-playbook -i inventory linux-enum.yml
+# add vm name, ip, and root pass (for both password fields) in inventory file
+# add path to save file to in the last task
+- name: Enumerate Linux servers
+  hosts: linux_servers
+  become: yes
+  tasks:
+    - name: Get list of active services running
+      command: "systemctl list-units --type=service --state=running"
+      register: services_run
+    
+    - name: Get list of all services
+      command: "systemctl list-units --type=service"
+      register: services_all
+    
+    - name: Check if netstat is installed
+      command: which netstat
+      register: netstat_check
+      ignore_errors: yes
+    
+    - name: Get tcp, udp, pid, addy + port for listening ports
+      when: netstat_check.rc == 0
+      command: "netstat -tulnp"
+      register: ports_all
+    
+    - name: Get tcp, udp, pid, addy + port for listening ports using ss
+      when: netstat_check.rc != 0
+      command: "ss -tuln"
+      register: ss_ports
+    
+    - name: Get connections, addresses/ports, tcp, udp, pid, and unix domain sockets
+      when: netstat_check.rc == 0
+      command: "netstat -antupx"
+      register: connections
+    
+    - name: Get distro and version
+      when: ansible_facts['os_family'] == "Debian"
+      shell: "cat /etc/*-release"
+      register: distro_version
+    
+    - name: Check if /etc/redhat-release exists
+      when: ansible_facts['os_family'] == "RedHat"
+      stat:
+        path: "/etc/redhat-release"
+      register: redhat_release_file
+    
+    - name: Get distro and version
+      command: "cat /etc/redhat-release"
+      when: ansible_facts['os_family'] == "RedHat"
+      register: rhel_version
+    
+    - name: Get kernel version
+      command: "cat /proc/version"
+      register: kernel_version
+    
+    - name: Get running processes
+      command: "ps aux"
+      register: processes
+    
+    - name: Get root processes
+      shell: "ps aux | grep root"
+      register: root_processes
+    
+    - name: Get installed apps/packages, versions, and if they are running (debian based)
+      when: ansible_facts['os_family'] == "Debian"
+      command: "dpkg -l"
+      register: debian_packages
+    
+    - name: Get installed apps/packages, versions, and if they are running (redhat based)
+      when: ansible_facts['os_family'] == "RedHat"
+      command: "rpm -qa"
+      register: rhel_packages
+    
+    - name: Get individual cron jobs
+      shell: "cat /etc/cron.d/*"
+      register: cron_jobs_individual
+      ignore_errors: yes
+    
+    - name: Get daily cron jobs
+      shell: "cat /etc/cron.daily/*"
+      register: daily_cron_jobs
+      ignore_errors: yes
+    
+    - name: Get hourly cron jobs
+      shell: "cat /etc/cron.hourly/*"
+      register: hourly_cron_jobs
+      ignore_errors: yes
+    
+    - name: Get weekly cron jobs
+      shell: "cat /etc/cron.weekly/*"
+      register: weekly_cron_jobs
+      ignore_errors: yes
+    
+    - name: Get monthly cron jobs
+      shell: "cat /etc/cron.monthly/*"
+      register: monthly_cron_jobs
+      ignore_errors: yes
+    
+    - name: Get system wide cron jobs
+      command: "cat /etc/crontab"
+      register: system_cron_jobs
+      ignore_errors: yes
+    
+    - name: Get anacron jobs
+      command: "cat /etc/anacrontab"
+      register: anacron_jobs
+      ignore_errors: yes
+    
+    - name: Check if ifconfig is installed
+      command: which ifconfig
+      register: ifconfig_check
+      ignore_errors: yes
+    
+    - name: Get active interfaces (including inactive/down), IP address, MAC, netmask, broadcast, and more
+      when: ifconfig_check.rc == 0
+      command: "ifconfig -a"
+      register: ifconfig_interfaces
+    
+    - name: Check if ip is installed
+      command: which ip
+      register: ip_check
+      ignore_errors: yes
+    
+    - name: Get interfaces, IP, MAC if no ifconfig
+      when: ifconfig_check.rc != 0 and ip_check.rc == 0
+      command: "ip a"
+      register: interfaces
+    
+    - name: Get links/network interfaces
+      when: ip_check.rc == 0
+      command: "ip link"
+      register: connected_interfaces
+    
+    - name: Check if /etc/network/interfaces exists (debian)
+      stat:
+        path: /etc/network/interfaces
+      register: debian_interfaces_file
+      when: ansible_facts['os_family'] == "Debian"
+    
+    - name: Get network interface configuration (debian)
+      when: ansible_facts['os_family'] == "Debian" and debian_interfaces_file.stat.exists
+      command: "cat /etc/network/interfaces"
+      register: debian_interfaces
+    
+    - name: Check if netplan exists (ubuntu 20.04+)
+      stat:
+        path: /etc/netplan/
+      register: netplan_check
+    
+    - name: check if ifconfig installed
+      command: which ifconfig
+      register: ifconfig_check
+      ignore_errors: yes
+
+    - name: Active interfaces (including inactive/down), Ip address, MAC, netmask, broadcast, and more
+      when: ifconfig_check.rc == 0
+      command: "ifconfig -a"
+      register: ifconfig_interfaces
+
+    - name: check if ip installed
+      command: which ip
+      register: ip_check
+      ignore_errors: yes
+
+    - name: interfaces, ip, mac if no ifconfig
+      when: ifconfig_check.rc != 0 and ip_check.rc == 0
+      command: ip a
+      register: interfaces
+
+    - name: links/network interfaces
+      when: ip_check.rc == 0
+      command: ip link
+      register: connected_interfaces
+
+    - name: Check if /etc/network/interfaces exists (debian)
+      stat:
+        path: /etc/network/interfaces
+      register: debian_interfaces_file
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Network interface configuration (debian)
+      when: ansible_facts['os_family'] == "Debian" and debian_interfaces_file.stat.exists
+      command: "cat /etc/network/interfaces"
+      register: debian_interfaces
+
+    - name: check if netplan exists (ubuntu 20.04+)
+      stat:
+        path: /etc/netplan/
+      register: netplan_check
+
+    - name: network interface configuration (ubuntu 20.04+)
+      when: ansible_facts['os_family'] == "Debian" and netplan_check.stat.exists
+      shell: "cat /etc/netplan/*"
+      register: netplan_interfaces
+
+    - name: Network interface configuration (redhat)
+      when: ansible_facts['os_family'] == "RedHat"
+      command: "cat /etc/sysconfig/network"
+      register: redhat_interfaces
+
+    - name: files + processes related to internet/network connections
+      command: "lsof -i"
+      register: network_files_processes
+
+    - name: files + processes but only port 80
+      command: "lsof -i :80"
+      register: port_80_files_processes
+
+    - name: user login history
+      command: "last"
+      register: login_history
+
+    - name: users currently logged in
+      command: "w"
+      register: logged_in_users
+
+    - name: sudoers file/permissions
+      command: "cat /etc/sudoers"
+      register: sudoers
+
+    - name: files and directories/subdirectories in /root/ dir
+      command: "ls -ahlR /root/"
+      register: root_files
+
+    - name: bash history
+      command: "cat ~/.bash_history"
+      register: bash_history
+
+    - name: zsh history
+      command: "cat ~/.zsh_history"
+      register: zsh_history
+      ignore_errors: yes
+      failed_when: zsh_history.rc != 0 and "No such file or directory" not in zsh_history.stderr
+
+    - name: ssh keys
+      command: "cat ~/.ssh/*"
+      register: ssh_keys
+      ignore_errors: yes
+      failed_when: ssh_output.rc != 0 and "No such file or directory" not in ssh_output.stderr
+
+    - name: mounted filesystems
+      command: "mount"
+      register: mounted_filesystems
+
+    - name: disk space usage for mounted filesystems
+      command: "df -h"
+      register: disk_space
+
+    - name: detect unmounted file-systems
+      command: "cat /etc/fstab"
+      register: unmounted_filesystems
+
+    - name: world writable folders
+      shell: "find / -xdev -type d -perm -0002 -ls 2>/dev/null"
+      register: world_writable_folders
+
+    - name: world writable files
+      shell: "find / -xdev -type f -perm -0002 -ls 2>/dev/null"
+      register: world_writable_files
+
+    - name: Combine all outputs
+      set_fact:
+        combined_output: |
+          Active Services:
+          {{ services_run.stdout | default('') }}
+          ------------------------------------------
+          All Services:
+          {{ services_all.stdout | default('') }}
+          ------------------------------------------
+          Listening ports:
+          {{ (ports_all.stdout | default('')) if netstat_check.rc == 0 else (ss_ports.stdout | default('')) }}
+          ------------------------------------------
+          Connections, addresses/ports, tcp, udp, pid, and unix domain sockets:
+          {{ connections.stdout | default('') if netstat_check.rc == 0 else '' }}
+          ------------------------------------------
+          Versions and distro:
+          {{ (distro_version.stdout | default('')) if distro_version is defined else (rhel_version.stdout | default('')) }}
+          ------------------------------------------
+          Kernel version:
+          {{ kernel_version.stdout | default('') }}
+          ------------------------------------------
+          All processes:
+          {{ processes.stdout | default('') }}
+          ------------------------------------------
+          Root processes:
+          {{ root_processes.stdout | default('') }}
+          ------------------------------------------
+          Installed packages:
+          {{ (debian_packages.stdout | default('')) if ansible_facts['os_family'] == 'Debian' else (rhel_packages.stdout | default('')) }}
+          ------------------------------------------
+          Individual cron jobs:
+          {{ cron_jobs_individual.stdout | default('') }}
+          ------------------------------------------
+          Daily cron jobs:
+          {{ daily_cron_jobs.stdout | default('') }}
+          ------------------------------------------
+          Hourly cron jobs:
+          {{ hourly_cron_jobs.stdout | default('') }}
+          ------------------------------------------
+          Weekly cron jobs:
+          {{ weekly_cron_jobs.stdout | default('') }}
+          ------------------------------------------
+          Monthly cron jobs:
+          {{ monthly_cron_jobs.stdout | default('') }}
+          ------------------------------------------
+          System wide cron jobs:
+          {{ system_cron_jobs.stdout | default('') }}
+          ------------------------------------------
+          Anacron jobs:
+          {{ anacron_jobs.stdout | default('') }}
+          ------------------------------------------
+          Network interfaces:
+          {{ (ifconfig_interfaces.stdout | default('')) if ifconfig_check.rc == 0 else (interfaces.stdout | default('')) }}
+           ------------------------------------------
+          Links/network interfaces:
+          {{ connected_interfaces.stdout | default('') }}
+          ------------------------------------------
+          Network interface configuration (debian):
+          {{ debian_interfaces.stdout | default('') if ansible_facts['os_family'] == 'Debian' and debian_interfaces_file.stat.exists else '' }}
+          ------------------------------------------
+          Network interface configuration (ubuntu 20.04+):
+          {{ netplan_interfaces.stdout | default('') if ansible_facts['os_family'] == 'Debian' and netplan_check.stat.exists else '' }}
+          ------------------------------------------
+          Network interface configuration (redhat):
+          {{ redhat_interfaces.stdout | default('') if ansible_facts['os_family'] == 'RedHat' else '' }}
+          ------------------------------------------
+          Files + processes related to internet/network connections:
+          {{ network_files_processes.stdout | default('') }}
+          ------------------------------------------
+          Files + processes but only port 80:
+          {{ port_80_files_processes.stdout | default('') }}
+          ------------------------------------------
+          User login history:
+          {{ login_history.stdout | default('') }}
+          ------------------------------------------
+          Users currently logged in:
+          {{ logged_in_users.stdout | default('') }}
+          ------------------------------------------
+          Sudoers file/permissions:
+          {{ sudoers.stdout | default('') }}
+          ------------------------------------------
+          Files and directories/subdirectories in /root/ dir:
+          {{ root_files.stdout | default('') }}
+          ------------------------------------------
+          Bash history:
+          {{ bash_history.stdout | default('') }}
+          ------------------------------------------
+          Zsh history:
+          {{ zsh_history.stdout | default('') }}
+          ------------------------------------------
+          SSH keys:
+          {{ ssh_keys.stdout | default('') }}
+          ------------------------------------------
+          Mounted filesystems:
+          {{ mounted_filesystems.stdout | default('') }}
+          ------------------------------------------
+          Disk space usage for mounted filesystems:
+          {{ disk_space.stdout | default('') }}
+          ------------------------------------------
+          Detect unmounted file-systems:
+          {{ unmounted_filesystems.stdout | default('') }}
+          ------------------------------------------
+          World writable folders:
+          {{ world_writable_folders.stdout | default('') }}
+          ------------------------------------------
+          World writable files:
+          {{ world_writable_files.stdout | default('') }}
+    - name: Write combined output to file
+      copy:
+        content: "{{ combined_output }}"
+        dest: "/wrccdc/linux_enum/{{ inventory_hostname }}-combined-output.txt" #change to where you want to save file
+        mode: '0777'
+      delegate_to: localhost
