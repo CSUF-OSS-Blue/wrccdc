@@ -1,0 +1,321 @@
+# to run use sudo ansible-playbook -i inventory alpine.yml
+# add vm name, ip, and root pass (for both password fields) in inventory file
+# add path to save file to in the last task
+- name: Enumerate Alpine servers
+  hosts: alpine_servers
+  become: yes
+  tasks:
+    
+    - name: Get list of active services running
+      command: "sudo rc-status"
+      register: services_run
+    
+    # - name: Get list of all services
+    #   command: "systemctl list-units --type=service"
+    #   register: services_all
+
+    - name: Check if netstat is installed
+      command: which netstat
+      register: netstat_check
+      ignore_errors: yes
+
+    - name: Get tcp, udp, pid, addy + port for listening ports
+      when: netstat_check.rc == 0
+      command: "netstat -tulnp" # ss -tuln
+      register: ports_all
+
+    - name: connections, addresses/ports, tcp, udp, pid, and unix domain sockets
+      when: netstat_check.rc == 0
+      command: "netstat -antupx"
+      register: connections
+
+    - name: Get distro and version
+      shell: "cat /etc/*-release"
+      register: distro_version
+
+    - name: Get kernel version
+      command: "cat /proc/version"
+      register: kernel_version
+
+    - name: Get running processes
+      command: "ps aux"
+      register: processes
+    
+    - name: root proceses
+      shell: "ps aux | grep root"
+      register: root_processes
+
+    - name: Get installed apps/packages, versions, and if they are running 
+      command: "apk info"
+      register: alpine_packages
+
+    - name: individual cron jobs
+      shell: "cat /etc/cron.d/*"
+      register: cron_jobs_individual
+      ignore_errors: yes
+      failed_when: cron_jobs_individual.rc != 0 and cron_jobs_individual.rc != 1
+    
+    - name: Daily cron jobs
+      shell: "cat /etc/cron.daily/*"
+      register: daily_cron_jobs
+      ignore_errors: yes
+      failed_when: daily_cron_jobs.rc != 0 and daily_cron_jobs.rc != 1
+
+    - name: Hourly cron jobs
+      shell: "cat /etc/cron.hourly/*"
+      register: hourly_cron_jobs
+      ignore_errors: yes
+      failed_when: hourly_cron_jobs.rc != 0 and hourly_cron_jobs.rc != 1
+
+    - name: Weekly cron jobs
+      shell: "cat /etc/cron.weekly/*"
+      register: weekly_cron_jobs
+      ignore_errors: yes
+      failed_when: weekly_cron_jobs.rc != 0 and weekly_cron_jobs.rc != 1
+
+    - name: Monthly cron jobs
+      shell: "cat /etc/cron.monthly/*"
+      register: monthly_cron_jobs
+      ignore_errors: yes
+      failed_when: monthly_cron_jobs.rc != 0 and monthly_cron_jobs.rc != 1
+    
+    - name: System wide cron jobs
+      command: "cat /etc/crontab"
+      register: system_cron_jobs
+      ignore_errors: yes
+      failed_when: system_cron_jobs.rc != 0 and system_cron_jobs.rc != 1
+
+    - name: Get anacron jobs (cron jobs that do not require system to be running)
+      command: "cat /etc/anacrontab"
+      register: anacron_jobs
+      ignore_errors: yes
+      failed_when: anacron_jobs.rc != 0 and anacron_jobs.rc != 1
+
+    - name: Active interfaces (including inactive/down), Ip address, MAC, netmask, broadcast, and more
+      command: "ifconfig -a"
+      register: ifconfig_interfaces
+
+    - name: check if ip installed
+      command: which ip
+      register: ip_check
+      ignore_errors: yes
+
+    - name : links/network interfaces
+      when: ip_check.rc == 0
+      command: ip link
+      register: connected_interfaces
+
+    - name: Network interface configurtion
+      command: "cat /etc/network/interfaces"
+      register: alpine_interfaces
+
+    - name: files + processes related to internet/network connections
+      command: "lsof -i"
+      register: network_files_processes
+
+    - name: files + processes but only port 80
+      command: "lsof -i :80"
+      register: port_80_files_processes
+
+    - name: user login history
+      command: "last"
+      register: login_history
+
+    - name: sudoers file/permissions
+      command: "cat /etc/sudoers"
+      register: sudoers
+
+    - name: files and directories/subdirectories in /root/ dir
+      command: "ls -ahlR /root/"
+      register: root_files
+
+    - name: bash histroy
+      command: "cat ~/.ash_history"
+      register: ash_history
+
+    - name: ssh keys
+      command: "cat ~/.ssh/*" # check other dirs
+      register: ssh_keys
+      ignore_errors: yes
+      failed_when: ssh_keys.rc != 0 and ssh_keys.rc != 1
+
+    - name: mounted filesystems
+      command: "mount"
+      register: mounted_filesystems
+    
+    - name: disk space usage for mounted filesystems
+      command: "df -h"
+      register: disk_space
+
+    - name: detect unmounted file-systems
+      command: "cat /etc/fstab"
+      register: unmounted_filesystems
+
+    - name: world writable folders
+      shell: "find / -xdev -type d -perm -0002 -ls 2>/dev/null"
+      register: world_writable_folders
+      failed_when: world_writable_folders.rc != 0 and world_writable_folders.rc !=1
+
+    - name: world writable files
+      shell: "find / -xdev -type f -perm -0002 -ls 2>/dev/null"
+      register: world_writable_files
+      failed_when: world_writable_files.rc != 0 and world_writable_files.rc != 1
+
+    - name: prepare consolidated output
+      set_fact:
+        consolidated_output:  |
+          Active Services:
+          {{ services_run.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Listening ports:
+          {{ ports_all.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Connections, addresses/ports, tcp, udp, pid, and unix domain sockets:
+          {{ connections.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Versions and distro:
+          {{ distro_version.stdout }} 
+          ------------------------------------------
+          ------------------------------------------
+          Kernel version: 
+          {{ kernel_version.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          All processes:
+          {{ processes.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Root processes:
+          {{ root_processes.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Installed packages:
+          {{ alpine_packages.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Individual cron jobs:
+          {{ cron_jobs_individual.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Daily cron jobs:
+          {{ daily_cron_jobs.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Hourly cron jobs:
+          {{ hourly_cron_jobs.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Weekly cron jobs:
+          {{ weekly_cron_jobs.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Monthly cron jobs:
+          {{ monthly_cron_jobs.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          System wide cron jobs:
+          {{ system_cron_jobs.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Anacron jobs:
+          {{ anacron_jobs.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Active interfaces:
+          {{ ifconfig_interfaces.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Connected interfaces:
+          {{ connected_interfaces.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Network interface configuration:
+          {{ alpine_interfaces.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          All files and processes related to network connections:
+          {{ network_files_processes.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Files and processes related to port 80:
+          {{ port_80_files_processes.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Login history:
+          {{ login_history.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Sudoers file:
+          {{ sudoers.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Files and directories in /root/:
+          {{ root_files.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Bash history:
+          {{ ash_history.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          SSH keys:
+          {{ ssh_keys.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Mounted filesystems:
+          {{ mounted_filesystems.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Disk space usage:
+          {{ disk_space.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          Unmounted filesystems:
+          {{ unmounted_filesystems.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          World writable folders:
+          {{ world_writable_folders.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+          World writable files:
+          {{ world_writable_files.stdout }}
+          ------------------------------------------
+          ------------------------------------------
+
+    - name: Write consolidated output to file
+      copy:
+        content: "{{ consolidated_output }}"
+        dest: "/wrccdc/enumeration/alpine_enum/{{ inventory_hostname }}-consolidated-output.txt" #change to where you want to save file
+        mode: '0777'
+      delegate_to: localhost
