@@ -1,0 +1,11 @@
+// top 10 users responsible for logins
+
+grep -i "session opened for user" /var/log/auth.log | awk '{for (i=1; i<=NF; i++) if ($i == "user") print $(i+1)}' | sort | uniq -c | sort -nr | head -10
+
+// Count successful logins
+grep -i "session opened for user" /var/log/auth.log | wc -l
+
+// for distros that use /var/log/secure
+grep -i "session opened for user" /var/log/secure | wc -l
+
+
