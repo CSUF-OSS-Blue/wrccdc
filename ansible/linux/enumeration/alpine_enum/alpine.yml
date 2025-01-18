@@ -129,7 +129,7 @@
       command: "ls -ahlR /root/"
       register: root_files
 
-    - name: bash histroy
+    - name: ash histroy
       command: "cat ~/.ash_history"
       register: ash_history
 
