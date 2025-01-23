@@ -1,0 +1,39 @@
+---
+- name: Gather System Information on Windows 10
+  hosts: win
+  tasks:
+    - name: Gather OS Information
+      win_shell: |
+        Get-ComputerInfo | Select-Object CsName, WindowsVersion, OsArchitecture, OsBuildNumber, InstallDate
+      register: os_info
+
+    - name: Output OS Information
+      debug:
+        var: os_info.stdout_lines
+
+    - name: Gather CPU Information
+      win_shell: |
+        Get-CimInstance -ClassName Win32_Processor | Select-Object Name, NumberOfCores, NumberOfLogicalProcessors
+      register: cpu_info
+
+    - name: Output CPU Information
+      debug:
+        var: cpu_info.stdout_lines
+
+    - name: Gather Memory Information
+      win_shell: |
+        Get-CimInstance -ClassName Win32_PhysicalMemory | Select-Object Manufacturer, Capacity, Speed
+      register: memory_info
+
+    - name: Output Memory Information
+      debug:
+        var: memory_info.stdout_lines
+
+    - name: Gather Disk Information
+      win_shell: |
+        Get-CimInstance -ClassName Win32_LogicalDisk | Select-Object DeviceID, FileSystem, FreeSpace, Size
+      register: disk_info
+
+    - name: Output Disk Information
+      debug:
+        var: disk_info.stdout_lines
