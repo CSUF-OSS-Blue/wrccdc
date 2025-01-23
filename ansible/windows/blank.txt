@@ -1,1 +1,35 @@
 future
+To get ansible working on Windows:
+  Commands on Windows Machine:
+    Powershell as admin Commands:
+    $url = "https://raw.githubusercontent.com/AlbanAndrieu/ansible-windows/refs/heads/master/files/ConfigureRemotingForAnsible.ps1"
+    $file = "$env:temp\Install-WMF3Hotfix.ps1"
+    (New-Object -TypeName System.Net.WebClient).DownloadFile($url, $file)
+    powershell.exe -ExecutionPolicy ByPass -File $file -Verbose
+
+  CommandLine Commands: 
+    ipconfig /all # you need the ip address of the windows machine for the hosts file in ansible
+    #if making user in cmd:
+    net user <name> /add
+    #user used for ansible needs to be admin
+    net localgroup Administrators <name> /add
+    #set a password for the user 
+    net user <name> <pass>
+------------------------------------------------------------------
+how the hosts file should look on the linux machine: 
+[win]
+192.168.239.143 #replace with ip address of windows device
+[win:vars]
+ansible_user=ansible #replace with user you created
+ansible_password=ansible #replace with user pass you created
+ansible_port=5986
+ansible_connection=winrm
+ansible_winrm_scheme=https
+ansible_winrm_server_cert_validation=ignore
+ansible_winrm_kerberos_delegation=true
+
+Check if everything works
+    ansible win -m win_ping
+
+test command for ansible playbook
+    ansible-playbook -i /etc/ansible/hosts systeminfo.yml 
