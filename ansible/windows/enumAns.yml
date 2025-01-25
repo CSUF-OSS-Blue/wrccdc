@@ -1,0 +1,9 @@
+---
+- name: Enumeration of proccesses
+  hosts: win
+  tasks:
+    - name: execute batch
+      script: /tmp/enum.bat
+      register: out
+
+    - debug: var=out.stdout_lines
