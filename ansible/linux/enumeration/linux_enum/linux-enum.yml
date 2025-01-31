@@ -1,6 +1,7 @@
 # to run use sudo ansible-playbook -i inventory linux-enum.yml
 # add vm name, ip, and root pass (for both password fields) in inventory file
 # add path to save file to in the last task
+
 - name: Enumerate Linux servers
   hosts: linux_servers
   become: yes
@@ -8,128 +9,173 @@
     - name: Get list of active services running
       command: "systemctl list-units --type=service --state=running"
       register: services_run
-    
+      ignore_errors: yes
+      failed_when: services_run.rc != 0 and services_run.rc != 1
+
     - name: Get list of all services
       command: "systemctl list-units --type=service"
       register: services_all
-    
+      ignore_errors: yes
+      failed_when: services_all.rc != 0 and services_all.rc != 1
+
     - name: Check if netstat is installed
       command: which netstat
       register: netstat_check
       ignore_errors: yes
+      failed_when: netstat_check.rc != 0 and netstat_check.rc != 1
     
     - name: Get tcp, udp, pid, addy + port for listening ports
       when: netstat_check.rc == 0
       command: "netstat -tulnp"
       register: ports_all
-    
+      ignore_errors: yes
+      failed_when: ports_all.rc != 0 and ports_all.rc != 1
+
     - name: Get tcp, udp, pid, addy + port for listening ports using ss
       when: netstat_check.rc != 0
       command: "ss -tuln"
       register: ss_ports
+      ignore_errors: yes
+      failed_when: ss_ports.rc != 0 and ss_ports.rc != 1
     
     - name: Get connections, addresses/ports, tcp, udp, pid, and unix domain sockets
       when: netstat_check.rc == 0
       command: "netstat -antupx"
       register: connections
+      ignore_errors: yes
+      failed_when: connections.rc != 0 and connections.rc != 1
     
     - name: Get distro and version
-      when: ansible_facts['os_family'] == "Debian"
+    # when: ansible_facts['os_family'] == "Debian"
       shell: "cat /etc/*-release"
       register: distro_version
+      ignore_errors: yes
+      failed_when: distro_version.rc != 0 and distro_version.rc != 1
     
-    - name: Check if /etc/redhat-release exists
-      when: ansible_facts['os_family'] == "RedHat"
-      stat:
-        path: "/etc/redhat-release"
-      register: redhat_release_file
+    # - name: Check if /etc/redhat-release exists
+    #   when: ansible_facts['os_family'] == "RedHat"
+    #   stat:
+    #     path: "/etc/redhat-release"
+    #   register: redhat_release_file
     
-    - name: Get distro and version
-      command: "cat /etc/redhat-release"
-      when: ansible_facts['os_family'] == "RedHat"
-      register: rhel_version
+    # - name: Get distro and version
+    #   command: "cat /etc/redhat-release"
+    #   when: ansible_facts['os_family'] == "RedHat"
+    #   register: rhel_version
     
     - name: Get kernel version
       command: "cat /proc/version"
       register: kernel_version
+      ignore_errors: yes
+      failed_when: kernel_version.rc != 0 and kernel_version.rc != 1
     
     - name: Get running processes
       command: "ps aux"
       register: processes
+      ignore_errors: yes
+      failed_when: processes.rc != 0 and processes.rc != 1
     
     - name: Get root processes
       shell: "ps aux | grep root"
       register: root_processes
+      ignore_errors: yes
+      failed_when: root_processes.rc != 0 and root_processes.rc != 1
     
     - name: Get installed apps/packages, versions, and if they are running (debian based)
       when: ansible_facts['os_family'] == "Debian"
       command: "dpkg -l"
       register: debian_packages
+      ignore_errors: yes
+      failed_when: debian_packages.rc != 0 and debian_packages.rc != 1
     
     - name: Get installed apps/packages, versions, and if they are running (redhat based)
       when: ansible_facts['os_family'] == "RedHat"
       command: "rpm -qa"
       register: rhel_packages
+      ignore_errors: yes
+      failed_when: rhel_packages.rc != 0 and rhel_packages.rc != 1
     
+    - name: Get installed apps/packages, versions, and if they are running (arch based)
+      when: ansible_facts['os_family'] == "Archlinux"
+      command: "pacman -Q"
+      register: arch_packages
+      ignore_errors: yes
+      failed_when: arch_packages.rc != 0 and arch_packages.rc != 1
+
     - name: Get individual cron jobs
       shell: "cat /etc/cron.d/*"
       register: cron_jobs_individual
       ignore_errors: yes
-    
+      failed_when: cron_jobs_individual.rc != 0 and cron_jobs_individual.rc != 1
+
     - name: Get daily cron jobs
       shell: "cat /etc/cron.daily/*"
       register: daily_cron_jobs
       ignore_errors: yes
-    
-    - name: Get hourly cron jobs
+      failed_when: daily_cron_jobs.rc != 0 and daily_cron_jobs.rc != 1
+
+    - name: Hourly cron jobs
       shell: "cat /etc/cron.hourly/*"
       register: hourly_cron_jobs
       ignore_errors: yes
-    
-    - name: Get weekly cron jobs
+      failed_when: hourly_cron_jobs.rc != 0 and hourly_cron_jobs.rc != 1
+
+    - name: Weekly cron jobs
       shell: "cat /etc/cron.weekly/*"
       register: weekly_cron_jobs
       ignore_errors: yes
-    
-    - name: Get monthly cron jobs
+      failed_when: weekly_cron_jobs.rc != 0 and weekly_cron_jobs.rc != 1
+
+    - name: Monthly cron jobs
       shell: "cat /etc/cron.monthly/*"
       register: monthly_cron_jobs
       ignore_errors: yes
+      failed_when: monthly_cron_jobs.rc != 0 and monthly_cron_jobs.rc != 1
     
-    - name: Get system wide cron jobs
+    - name: System wide cron jobs
       command: "cat /etc/crontab"
       register: system_cron_jobs
       ignore_errors: yes
-    
-    - name: Get anacron jobs
+      failed_when: system_cron_jobs.rc != 0 and system_cron_jobs.rc != 1
+
+    - name: Get anacron jobs (cron jobs that do not require system to be running)
       command: "cat /etc/anacrontab"
       register: anacron_jobs
       ignore_errors: yes
-    
+      failed_when: anacron_jobs.rc != 0 and anacron_jobs.rc != 1
+
     - name: Check if ifconfig is installed
       command: which ifconfig
       register: ifconfig_check
       ignore_errors: yes
+      failed_when: ifconfig_check.rc != 0 and ifconfig_check.rc != 1
     
     - name: Get active interfaces (including inactive/down), IP address, MAC, netmask, broadcast, and more
       when: ifconfig_check.rc == 0
       command: "ifconfig -a"
       register: ifconfig_interfaces
+      ignore_errors: yes
+      failed_when: ifconfig_interfaces.rc != 0 and ifconfig_interfaces.rc != 1
     
     - name: Check if ip is installed
       command: which ip
       register: ip_check
       ignore_errors: yes
+      failed_when: ip_check.rc != 0 and ip_check.rc != 1
     
     - name: Get interfaces, IP, MAC if no ifconfig
       when: ifconfig_check.rc != 0 and ip_check.rc == 0
       command: "ip a"
       register: interfaces
+      ignore_errors: yes
+      failed_when: interfaces.rc != 0 and interfaces.rc != 1
     
     - name: Get links/network interfaces
       when: ip_check.rc == 0
       command: "ip link"
       register: connected_interfaces
+      ignore_errors: yes
+      failed_when: connected_interfaces.rc != 0 and connected_interfaces.rc != 1
     
     - name: Check if /etc/network/interfaces exists (debian)
       stat:
@@ -182,6 +228,8 @@
       when: ansible_facts['os_family'] == "Debian" and debian_interfaces_file.stat.exists
       command: "cat /etc/network/interfaces"
       register: debian_interfaces
+      ignore_errors: yes
+      failed_when: debian_interfaces.rc != 0 and debian_interfaces.rc != 1
 
     - name: check if netplan exists (ubuntu 20.04+)
       stat:
@@ -192,71 +240,102 @@
       when: ansible_facts['os_family'] == "Debian" and netplan_check.stat.exists
       shell: "cat /etc/netplan/*"
       register: netplan_interfaces
+      ignore_errors: yes
+      failed_when: netplan_interfaces.rc != 0 and netplan_interfaces.rc != 1
 
     - name: Network interface configuration (redhat)
       when: ansible_facts['os_family'] == "RedHat"
       command: "cat /etc/sysconfig/network"
       register: redhat_interfaces
 
+    - name: Network interface configuration (arch)
+      when: ansible_facts['os_family'] == "Archlinux"
+      command: "cat /etc/systemd/network/*"
+      register: arch_interfaces
+
     - name: files + processes related to internet/network connections
       command: "lsof -i"
       register: network_files_processes
+      ignore_errors: yes
+      failed_when: network_files_processes.rc != 0 and network_files_processes.rc != 1
 
     - name: files + processes but only port 80
       command: "lsof -i :80"
       register: port_80_files_processes
+      ignore_errors: yes
+      failed_when: port_80_files_processes.rc != 0 and port_80_files_processes.rc != 1
 
     - name: user login history
       command: "last"
       register: login_history
+      ignore_errors: yes
+      failed_when: login_history.rc != 0 and login_history.rc != 1
 
     - name: users currently logged in
       command: "w"
       register: logged_in_users
+      ignore_errors: yes
+      failed_when: logged_in_users.rc != 0 and logged_in_users.rc != 1
 
     - name: sudoers file/permissions
       command: "cat /etc/sudoers"
       register: sudoers
-
+      ignore_errors: yes
+      failed_when: sudoers.rc != 0 and sudoers.rc != 1
+      
     - name: files and directories/subdirectories in /root/ dir
       command: "ls -ahlR /root/"
       register: root_files
+      ignore_errors: yes
+      failed_when: root_files.rc != 0 and root_files.rc != 1
 
     - name: bash history
       command: "cat ~/.bash_history"
       register: bash_history
+      ignore_errors: yes
+      failed_when: bash_history.rc != 0 and bash_history.rc != 1
 
     - name: zsh history
       command: "cat ~/.zsh_history"
       register: zsh_history
       ignore_errors: yes
-      failed_when: zsh_history.rc != 0 and "No such file or directory" not in zsh_history.stderr
+      failed_when: zsh_history.rc != 0 and zsh_history.rc != 1
 
     - name: ssh keys
       command: "cat ~/.ssh/*"
       register: ssh_keys
       ignore_errors: yes
-      failed_when: ssh_output.rc != 0 and "No such file or directory" not in ssh_output.stderr
+      failed_when: ssh_keys.rc != 0 and ssh_keys.rc != 1
 
     - name: mounted filesystems
       command: "mount"
       register: mounted_filesystems
+      ignore_errors: yes
+      failed_when: mounted_filesystems.rc != 0 and mounted_filesystems.rc != 1
 
     - name: disk space usage for mounted filesystems
       command: "df -h"
       register: disk_space
+      ignore_errors: yes
+      failed_when: disk_space.rc != 0 and disk_space.rc != 1
 
     - name: detect unmounted file-systems
       command: "cat /etc/fstab"
       register: unmounted_filesystems
+      ignore_errors: yes
+      failed_when: unmounted_filesystems.rc != 0 and unmounted_filesystems.rc != 1
 
     - name: world writable folders
       shell: "find / -xdev -type d -perm -0002 -ls 2>/dev/null"
       register: world_writable_folders
+      ignore_errors: yes
+      failed_when: world_writable_folders.rc != 0 and world_writable_folders.rc != 1
 
     - name: world writable files
       shell: "find / -xdev -type f -perm -0002 -ls 2>/dev/null"
       register: world_writable_files
+      ignore_errors: yes
+      failed_when: world_writable_files.rc != 0 and world_writable_files.rc != 1
 
     - name: Combine all outputs
       set_fact:
@@ -268,13 +347,21 @@
           {{ services_all.stdout | default('') }}
           ------------------------------------------
           Listening ports:
-          {{ (ports_all.stdout | default('')) if netstat_check.rc == 0 else (ss_ports.stdout | default('')) }}
+          {% if netstat_check.rc == 0 %}
+          {{ ports_all.stdout | default('') }}
+          {% else %}
+          {{ ss_ports.stdout | default('') }}
+          {% endif %}
           ------------------------------------------
           Connections, addresses/ports, tcp, udp, pid, and unix domain sockets:
-          {{ connections.stdout | default('') if netstat_check.rc == 0 else '' }}
+          {% if netstat_check.rc == 0 %}
+          {{ connections.stdout | default('') }}
+          {% else %}
+          ''
+          {% endif %}
           ------------------------------------------
           Versions and distro:
-          {{ (distro_version.stdout | default('')) if distro_version is defined else (rhel_version.stdout | default('')) }}
+          {{ distro_version.stdout | default('') }}
           ------------------------------------------
           Kernel version:
           {{ kernel_version.stdout | default('') }}
@@ -286,7 +373,13 @@
           {{ root_processes.stdout | default('') }}
           ------------------------------------------
           Installed packages:
-          {{ (debian_packages.stdout | default('')) if ansible_facts['os_family'] == 'Debian' else (rhel_packages.stdout | default('')) }}
+          {% if ansible_facts['os_family'] == 'Debian' %}
+          {{ debian_packages.stdout | default('') }}
+          {% elif ansible_facts['os_family'] == 'RedHat' %}
+          {{ rhel_packages.stdout | default('') }}
+          {% elif ansible_facts['os_family'] == 'Archlinux' %}
+          {{ arch_packages.stdout | default('') }}
+          {% endif %}
           ------------------------------------------
           Individual cron jobs:
           {{ cron_jobs_individual.stdout | default('') }}
@@ -310,19 +403,42 @@
           {{ anacron_jobs.stdout | default('') }}
           ------------------------------------------
           Network interfaces:
-          {{ (ifconfig_interfaces.stdout | default('')) if ifconfig_check.rc == 0 else (interfaces.stdout | default('')) }}
-           ------------------------------------------
+          {% if ifconfig_check.rc == 0 %}
+          {{ ifconfig_interfaces.stdout | default('') }}
+          {% else %}
+          {{ interfaces.stdout | default('') }}
+          {% endif %}
+          ------------------------------------------
           Links/network interfaces:
           {{ connected_interfaces.stdout | default('') }}
           ------------------------------------------
           Network interface configuration (debian):
-          {{ debian_interfaces.stdout | default('') if ansible_facts['os_family'] == 'Debian' and debian_interfaces_file.stat.exists else '' }}
+          {% if ansible_facts['os_family'] == 'Debian' and debian_interfaces_file.stat.exists %}
+          {{ debian_interfaces.stdout | default('') }}
+          {% else %}
+          ''
+          {% endif %}
           ------------------------------------------
           Network interface configuration (ubuntu 20.04+):
-          {{ netplan_interfaces.stdout | default('') if ansible_facts['os_family'] == 'Debian' and netplan_check.stat.exists else '' }}
+          {% if ansible_facts['os_family'] == 'Debian' and netplan_check.stat.exists %}
+          {{ netplan_interfaces.stdout | default('') }}
+          {% else %}
+          ''
+          {% endif %}
           ------------------------------------------
           Network interface configuration (redhat):
-          {{ redhat_interfaces.stdout | default('') if ansible_facts['os_family'] == 'RedHat' else '' }}
+          {% if ansible_facts['os_family'] == 'RedHat' %}
+          {{ redhat_interfaces.stdout | default('') }}
+          {% else %}
+          ''
+          {% endif %}
+          ------------------------------------------
+           Network interface configuration (arch):
+          {% if ansible_facts['os_family'] == 'Archlinux' %}
+          {{ arch_interfaces.stdout | default('') }}
+          {% else %}
+          ''
+          {% endif %}
           ------------------------------------------
           Files + processes related to internet/network connections:
           {{ network_files_processes.stdout | default('') }}
@@ -365,6 +481,7 @@
           ------------------------------------------
           World writable files:
           {{ world_writable_files.stdout | default('') }}
+          
     - name: Write combined output to file
       copy:
         content: "{{ combined_output }}"
