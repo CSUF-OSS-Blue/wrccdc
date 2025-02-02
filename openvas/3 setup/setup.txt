@@ -1,0 +1,9 @@
+Setup
+To allow the current user to run docker and therefore start the containers, they must be added to the docker user group. To make the group change effective, either logout and login again or use su.
+
+Add current user to docker group and apply group changes for the current shell environment
+sudo usermod -aG docker $USER && su $USER
+For downloading the Greenbone Community Edition docker compose file, a destination directory should be created.
+
+Create download directory
+export DOWNLOAD_DIR=$HOME/greenbone-community-container && mkdir -p $DOWNLOAD_DI

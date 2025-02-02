@@ -1,0 +1,16 @@
+Setup and Start Script
+Note
+
+Please remember to follow the instructions described in the Prerequisites first (dependencies, docker, setup)
+
+As a quick solution we provide all the commands above in a single script. This script can be downloaded with the following command directly:
+
+Downloading setup and start script to the current working dir
+curl -f -O https://greenbone.github.io/docs/latest/_static/setup-and-start-greenbone-community-edition.sh && chmod u+x setup-and-start-greenbone-community-edition.sh
+To execute the script following command needs to be run
+
+Run setup and start script
+./setup-and-start-greenbone-community-edition.sh
+
+
+link: https://greenbone.github.io/docs/latest/22.4/container/index.html
