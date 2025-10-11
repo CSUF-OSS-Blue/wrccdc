@@ -69,27 +69,6 @@ try {
     Write-Host "ActiveDirectory module not present or not allowed - skipping AD backups." -ForegroundColor Yellow
 }
 
-# -------------------------
-# 1) EternalBlue mitigation (SMBv1 / SMB signing / patch guidance)
-# -------------------------
-# Disable SMBv1 server and client where possible
-Safe-Run { Set-SmbServerConfiguration -EnableSMB1Protocol $false -Force } "Disable SMBv1 (server)"
-Safe-Run { Set-SmbClientConfiguration -EnableSMB1Protocol $false -Force } "Disable SMBv1 (client)"
-
-# Require SMB signing on server and client (helps protect SMB relays where supported)
-Safe-Run { Set-SmbServerConfiguration -RequireSecuritySignature $true -Force } "Require SMB server-side security signature"
-Safe-Run { Set-SmbClientConfiguration -RequireSecuritySignature $true -Force } "Require SMB client-side security signature"
-
-# Note: Patches (MS17-010 and later) must be applied via your patch management system.
-Write-Host "NOTE: Ensure MS17-010 and later Windows patches are applied via your patching system." -ForegroundColor Cyan
-
-# -------------------------
-# 2) NTLM / LM hardening
-# -------------------------
-# Do not store LM hashes and force NTLMv2
-Safe-Run { reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v NoLmHash /t REG_DWORD /d 1 /f } "Set NoLmHash=1 (do not store LM hashes)"
-Safe-Run { reg add "HKLM\SYSTEM\CurrentControlSet\Control\Lsa" /v LmCompatibilityLevel /t REG_DWORD /d 5 /f } "Set LmCompatibilityLevel=5 (NTLMv2 only / require strong session security)"
-
 # Disable WDigest storing plaintext credentials (if present)
 Safe-Run { reg add "HKLM\SYSTEM\CurrentControlSet\Control\SecurityProviders\WDigest" /v UseLogonCredential /t REG_DWORD /d 0 /f } "Disable WDigest UseLogonCredential"
 
@@ -109,13 +88,6 @@ if ($adModuleLoaded) {
 } else {
     Write-Host "Cannot enumerate AD CS servers (ActiveDirectory module not loaded). Manually review AD CS per MS KB5005413." -ForegroundColor Yellow
 }
-
-# -------------------------
-# 4) LLMNR / NBT-NS poisoning mitigation
-# -------------------------
-# Disable LLMNR via registry (applies to local machine). For domain-joined machines, deploy via Group Policy.
-Safe-Run { New-Item -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Force | Out-Null } "Ensure DNSClient policy key exists"
-Safe-Run { New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\DNSClient" -Name "EnableMulticast" -PropertyType DWord -Value 0 -Force } "Disable LLMNR (EnableMulticast=0)"
 
 # Optionally disable NetBIOS over TCP/IP on interfaces (non-invasive check first)
 Write-Host "INFO: Disabling NetBIOS over TCP/IP on all physical interfaces - will change adapter settings. Review first." -ForegroundColor Cyan
@@ -155,24 +127,6 @@ if ($adModuleLoaded) {
     }
 }
 
-
-# -------------------------
-# 6) Close vulnerable ports (basic host firewall hardening)
-# -------------------------
-# Block SMBv1-related traffic and common legacy ports at local firewall level (example). Use enterprise firewall/GPO for domain-wide rules.
-$fwRules = @(
-    @{Name='Deny_SMB1_TCP445'; Protocol='TCP'; LocalPort='445'; Direction='Inbound'},
-    @{Name='Deny_SMB1_TCP139'; Protocol='TCP'; LocalPort='139'; Direction='Inbound'}
-)
-foreach ($r in $fwRules) {
-    try {
-        New-NetFirewallRule -DisplayName $r.Name -Direction $r.Direction -LocalPort $r.LocalPort -Protocol $r.Protocol -Action Block -Profile Any -Enabled True -ErrorAction Stop
-        Write-Host "Created firewall rule: $($r.Name)"
-    } catch {
-        Write-Warning "Firewall rule $($r.Name) may already exist or failed: $_"
-    }
-}
-
 # -------------------------
 # 7) Turn off token delegation / constrained delegation
 # -------------------------
@@ -192,8 +146,6 @@ Write-Host "Exported constrained delegation entries for review."
 # --- Turn off DONT_REQ_PREAUTH / PASSWD_NOTREQD ---
 
 if ($adModuleLoaded) {
-
-
 
     # DoesNotRequirePreAuth
 
@@ -285,6 +237,4 @@ if ($adModuleLoaded) {
 Write-Host "`nBackup and changes logged to: $backupDir" -ForegroundColor Green
 Write-Host "Review the exported files before rolling back or making broader changes in production." -ForegroundColor Cyan
 Write-Host "Recommended next steps:" -ForegroundColor Cyan
-Write-Host " - Deploy SMB/LDAP signing & LLMNR settings via GPO or MDM for fleet-wide coverage." -ForegroundColor Cyan
-Write-Host " - Configure 'Network security: Restrict NTLM' via Group Policy (Audit first), and remediate failures." -ForegroundColor Cyan
 Write-Host " - For AD CS (ESC) hardening: review certificate templates, remove 'Authenticated Users' Enroll rights, require manager approval where applicable, and audit CA ACLs per MS guidance." -ForegroundColor Cyan
