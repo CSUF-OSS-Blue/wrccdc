@@ -1,5 +1,5 @@
 function Generate-RandomPassword {
-    $length = 10
+    $length = 16
     $upper   = (65..90   | ForEach-Object {[char]$_}) # A-Z
     $lower   = (97..122  | ForEach-Object {[char]$_}) # a-z
     $numbers = (48..57   | ForEach-Object {[char]$_}) # 0-9
