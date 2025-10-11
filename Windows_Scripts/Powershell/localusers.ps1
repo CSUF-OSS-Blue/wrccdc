@@ -3,7 +3,7 @@ if (!($domainRole -eq 4 -or $domainRole -eq 5)) {
     $outputFile = "C:\Users\Administrator\Documents\passwords_output.txt"
 
     function Generate-RandomPassword {
-        $length = 10
+        $length = 16
         $upper   = (65..90   | ForEach-Object {[char]$_}) # A-Z
         $lower   = (97..122  | ForEach-Object {[char]$_}) # a-z
         $numbers = (48..57   | ForEach-Object {[char]$_}) # 0-9
