@@ -20,8 +20,8 @@ echo "services:
 sed -i '' 's/5\.0\.0/4.12.0/g' docker-compose.yml
 
 
-docker compose -f generate-indexer-certs.yml build
+docker-compose -f generate-indexer-certs.yml build
 
-docker compose -f generate-indexer-certs.yml run --rm generator
+docker-compose -f generate-indexer-certs.yml run --rm generator
 
-docker compose up -d
+docker-compose up -d
