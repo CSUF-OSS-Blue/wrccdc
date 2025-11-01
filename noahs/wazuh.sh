@@ -4,9 +4,9 @@ docker-desktop
 
 open -a docker
 
-git clone https://github.com/wazuh/wazuh-docker.git
+git clone https://github.com/BareMetal-Alchemist/wazuh-docker-fork.git
 
-cd wazuh-docker/single-node/
+cd wazuh-docker-fork/single-node/
 
 echo "services:
   generator:
