@@ -17,7 +17,7 @@ echo "services:
       - ./config/certs.yml:/config/certs.yml
 " > generate-indexer-certs.yml
 
-sed -i 's/5\.0\.0/4.12.0/g' docker-compose.yml
+sed -i 's/4\.14\.0/4.12.0/g' docker-compose.yml
 
 
 docker-compose -f generate-indexer-certs.yml build
