@@ -17,12 +17,12 @@ run_command() {
 consolidated_output=""
 
 # Get world writable folders
-consolidated_output+="World writable folders:\n"
+consolidated_output+="\033[1;31mWorld writable folders:\n\033[0m"
 consolidated_output+="$(run_command 'find / -xdev -type d -perm -0002 -ls 2>/dev/null')\n"
 consolidated_output+="------------------------------------------\n"
 
 # Get world writable files
-consolidated_output+="World writable files:\n"
+consolidated_output+="\033[1;31mWorld writable files:\n\033[0m"
 consolidated_output+="$(run_command 'find / -xdev -type f -perm -0002 -ls 2>/dev/null')\n"
 consolidated_output+="------------------------------------------\n"
 

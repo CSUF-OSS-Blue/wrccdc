@@ -17,12 +17,12 @@ run_command() {
 consolidated_output=""
 
 # Get running processes
-consolidated_output+="All processes:\n"
+consolidated_output+="\033[1;31mAll processes:\n\033[0m"
 consolidated_output+="$(run_command 'ps aux')\n"
 consolidated_output+="------------------------------------------\n"
 
 # Get root processes
-consolidated_output+="Root processes:\n"
+consolidated_output+="\033[1;31mRoot processes:\n\033[0m"
 consolidated_output+="$(run_command 'ps aux | grep root')\n"
 consolidated_output+="------------------------------------------\n"
 
