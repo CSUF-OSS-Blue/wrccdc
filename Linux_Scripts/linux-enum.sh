@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/bash
 
 # Function to check if a command exists
 command_exists() {
@@ -55,16 +55,6 @@ consolidated_output+="------------------------------------------\n"
 # Get kernel version
 consolidated_output+="Kernel version:\n"
 consolidated_output+="$(run_command 'cat /proc/version')\n"
-consolidated_output+="------------------------------------------\n"
-
-# Get running processes
-consolidated_output+="All processes:\n"
-consolidated_output+="$(run_command 'ps aux')\n"
-consolidated_output+="------------------------------------------\n"
-
-# Get root processes
-consolidated_output+="Root processes:\n"
-consolidated_output+="$(run_command 'ps aux | grep root')\n"
 consolidated_output+="------------------------------------------\n"
 
 # Get installed apps/packages, versions, and if they are running
@@ -156,18 +146,8 @@ consolidated_output+="Unmounted filesystems:\n"
 consolidated_output+="$(run_command 'cat /etc/fstab')\n"
 consolidated_output+="------------------------------------------\n"
 
-# Get world writable folders
-consolidated_output+="World writable folders:\n"
-consolidated_output+="$(run_command 'find / -xdev -type d -perm -0002 -ls 2>/dev/null')\n"
-consolidated_output+="------------------------------------------\n"
-
-# Get world writable files
-consolidated_output+="World writable files:\n"
-consolidated_output+="$(run_command 'find / -xdev -type f -perm -0002 -ls 2>/dev/null')\n"
-consolidated_output+="------------------------------------------\n"
-
 # Write consolidated output to file
-output_file="/home/enum.txt"
+output_file="/tmp/enum.txt"
 echo -e "$consolidated_output" > "$output_file"
 chmod 0777 "$output_file"
 
