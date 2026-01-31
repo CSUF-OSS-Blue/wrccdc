@@ -1,4 +1,4 @@
-#!/bin/ash
+#!/bin/bash
 
 # Function to check if a command exists
 command_exists() {
@@ -67,10 +67,6 @@ consolidated_output+="Root processes:\n"
 consolidated_output+="$(run_command 'ps aux | grep root')\n"
 consolidated_output+="------------------------------------------\n"
 
-# Get installed apps/packages, versions, and if they are running
-consolidated_output+="Installed packages:\n"
-consolidated_output+="$(run_command 'apk info')\n"
-consolidated_output+="------------------------------------------\n"
 
 # Get individual cron jobs
 consolidated_output+="Individual cron jobs:\n"
