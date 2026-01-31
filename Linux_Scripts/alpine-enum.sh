@@ -68,9 +68,9 @@ consolidated_output+="$(run_command 'ps aux | grep root')\n"
 consolidated_output+="------------------------------------------\n"
 
 # Get installed apps/packages, versions, and if they are running
-consolidated_output+="Installed packages:\n"
-consolidated_output+="$(run_command 'apk info')\n"
-consolidated_output+="------------------------------------------\n"
+# consolidated_output+="Installed packages:\n"
+# consolidated_output+="$(run_command 'apk info')\n"
+# consolidated_output+="------------------------------------------\n"
 
 # Get individual cron jobs
 consolidated_output+="Individual cron jobs:\n"
@@ -167,7 +167,7 @@ consolidated_output+="$(run_command 'find / -xdev -type f -perm -0002 -ls 2>/dev
 consolidated_output+="------------------------------------------\n"
 
 # Write consolidated output to file
-output_file="/home/enum.txt"
+output_file="/tmp/enum.txt"
 echo -e "$consolidated_output" > "$output_file"
 chmod 0777 "$output_file"
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env nix-shell
 #! nix-shell -i bash -p bash
 
-OUTPUT_DIR="/home"
+OUTPUT_DIR="/tmp"
 OUTPUT_FILE="$OUTPUT_DIR/$(hostname)-enumeration.txt"
 
 mkdir -p "$OUTPUT_DIR"

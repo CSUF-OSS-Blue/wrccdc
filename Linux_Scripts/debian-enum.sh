@@ -78,9 +78,9 @@ consolidated_output+="$(run_command 'ps aux | grep ^root')\n"
 consolidated_output+="------------------------------------------\n"
 
 # Get installed apps/packages (Debian/dpkg specific)
-consolidated_output+="Installed packages (dpkg):\n"
-consolidated_output+="$(run_command 'dpkg -l')\n"
-consolidated_output+="------------------------------------------\n"
+# consolidated_output+="Installed packages (dpkg):\n"
+# consolidated_output+="$(run_command 'dpkg -l')\n"
+# consolidated_output+="------------------------------------------\n"
 
 # Get individual cron jobs
 consolidated_output+="Individual cron jobs:\n"
@@ -192,7 +192,7 @@ consolidated_output+="------------------------------------------\n"
 # Write consolidated output to file
 # Note: Writing to /home root usually requires sudo/root permissions. 
 # If running as a standard user, change this to /tmp/enum.txt or /home/$USER/enum.txt
-output_file="/home/enum.txt"
+output_file="/tmp/enum.txt"
 
 echo -e "$consolidated_output" > "$output_file"
 
